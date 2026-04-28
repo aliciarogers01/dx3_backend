@@ -95,41 +95,47 @@
       iconAnchor: [14, 14]
     });
 
+    const propertyMarkers = [];
+
     async function loadNearbyBuildings(lat, lng) {
-  const radius = 250;
+      const radius = 500;
 
-  const query = `
-    [out:json][timeout:25];
-    (
-      way["building"](around:${radius},${lat},${lng});
-    );
-    out center tags 25;
-  `;
+      const query = `
+        [out:json][timeout:25];
+        (
+          way["building"](around:${radius},${lat},${lng});
+          relation["building"](around:${radius},${lat},${lng});
+        );
+        out center tags 100;
+      `;
 
-  const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+      const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
 
-  const response = await fetch(url);
-  const data = await response.json();
+      const response = await fetch(url);
+      const data = await response.json();
 
-  data.elements.forEach((building, index) => {
-    if (!building.center) return;
+      propertyMarkers.forEach(marker => map.removeLayer(marker));
+      propertyMarkers.length = 0;
 
-    const tags = building.tags || {};
+      data.elements.forEach((building, index) => {
+        if (!building.center) return;
 
-    const address =
-      tags["addr:housenumber"] && tags["addr:street"]
-        ? tags["addr:housenumber"] + " " + tags["addr:street"]
-        : "Unknown Property #" + (index + 1);
+        const tags = building.tags || {};
 
-    addPropertyMarker({
-      address: address,
-      lat: building.center.lat,
-      lng: building.center.lon,
-      image: "https://placehold.co/300x200?text=Property"
-    });
-  });
-}
-    
+        const address =
+          tags["addr:housenumber"] && tags["addr:street"]
+            ? tags["addr:housenumber"] + " " + tags["addr:street"]
+            : "Unknown Property #" + (index + 1);
+
+        addPropertyMarker({
+          address: address,
+          lat: building.center.lat,
+          lng: building.center.lon,
+          image: "https://placehold.co/300x200?text=Property"
+        });
+      });
+    }
+
     function addPropertyMarker(property) {
       const marker = L.marker([property.lat, property.lng], {
         icon: propertyIcon
@@ -139,9 +145,11 @@
         <div class="property-card">
           <img src="${property.image}" />
           <strong>${property.address}</strong>
-          <button onclick="inquireProperty('${property.address}')">Inquire</button>
+          <button onclick="inquireProperty('${property.address.replace(/'/g, "\\'")}')">Inquire</button>
         </div>
       `);
+
+      propertyMarkers.push(marker);
     }
 
     loadNearbyBuildings(startLat, startLng);
@@ -153,6 +161,7 @@
     window.setPlayerLocation = function(lat, lng) {
       map.setView([lat, lng], 17);
       playerMarker.setLatLng([lat, lng]);
+      loadNearbyBuildings(lat, lng);
     };
   </script>
 </body>

@@ -5,8 +5,8 @@
   <title>Deed Exchange Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     html, body, #map {
@@ -17,8 +17,7 @@
       overflow: hidden;
     }
 
-    .mapboxgl-ctrl-bottom-left,
-    .mapboxgl-ctrl-bottom-right {
+    .leaflet-control-container {
       display: none;
     }
   </style>
@@ -28,26 +27,32 @@
   <div id="map"></div>
 
   <script>
-    mapboxgl.accessToken = "pk.eyJ1Ijoib2htc3JhZGlvIiwiYSI6ImNtbmxuZGFpaDFhNGkycnE1ajlqZHVmeTMifQ.0D3kQ_qlHIGiskjSo5D-aQ";
+    const MAPBOX_TOKEN = "pk.eyJ1Ijoib2htc3JhZGlvIiwiYSI6ImNtbmxuZGFpaDFhNGkycnE1ajlqZHVmeTMifQ.0D3kQ_qlHIGiskjSo5D-aQ";
 
-    const map = new mapboxgl.Map({
-      container: "map",
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [-81.530993, 41.058867],
-      zoom: 18.5,
-      pitch: 0,
-      bearing: 0,
+    const map = L.map("map", {
+      zoomControl: false,
       attributionControl: false
-    });
+    }).setView([41.058867, -81.530993], 19);
+
+    L.tileLayer(
+      "https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=" + MAPBOX_TOKEN,
+      {
+        tileSize: 512,
+        zoomOffset: -1,
+        maxZoom: 22
+      }
+    ).addTo(map);
+
+    const playerMarker = L.circleMarker([41.058867, -81.530993], {
+      radius: 8,
+      color: "#0066ff",
+      fillColor: "#0066ff",
+      fillOpacity: 1
+    }).addTo(map);
 
     window.setPlayerLocation = function(lat, lng) {
-      map.flyTo({
-        center: [lng, lat],
-        zoom: 18.5,
-        pitch: 0,
-        bearing: 0,
-        speed: 1.2
-      });
+      map.setView([lat, lng], 19);
+      playerMarker.setLatLng([lat, lng]);
     };
   </script>
 </body>

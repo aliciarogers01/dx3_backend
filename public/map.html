@@ -98,15 +98,16 @@
     const propertyMarkers = [];
 
     async function loadNearbyBuildings(lat, lng) {
-      const radius = 500;
+      const radius = 1200;
 
       const query = `
         [out:json][timeout:25];
         (
+          node["addr:housenumber"](around:${radius},${lat},${lng});
           way["building"](around:${radius},${lat},${lng});
           relation["building"](around:${radius},${lat},${lng});
         );
-        out center tags 100;
+        out center tags 200;
       `;
 
       const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
@@ -117,10 +118,13 @@
       propertyMarkers.forEach(marker => map.removeLayer(marker));
       propertyMarkers.length = 0;
 
-      data.elements.forEach((building, index) => {
-        if (!building.center) return;
+      data.elements.forEach((property, index) => {
+        const pointLat = property.lat || property.center?.lat;
+        const pointLng = property.lon || property.center?.lon;
 
-        const tags = building.tags || {};
+        if (!pointLat || !pointLng) return;
+
+        const tags = property.tags || {};
 
         const address =
           tags["addr:housenumber"] && tags["addr:street"]
@@ -129,8 +133,8 @@
 
         addPropertyMarker({
           address: address,
-          lat: building.center.lat,
-          lng: building.center.lon,
+          lat: pointLat,
+          lng: pointLng,
           image: "https://placehold.co/300x200?text=Property"
         });
       });

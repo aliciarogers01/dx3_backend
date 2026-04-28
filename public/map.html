@@ -98,16 +98,20 @@
     const propertyMarkers = [];
 
     async function loadNearbyBuildings(lat, lng) {
-      const radius = 500;
+      const radius = 700;
 
       const query = `
         [out:json][timeout:25];
         (
           node["addr:housenumber"](around:${radius},${lat},${lng});
+          way["addr:housenumber"](around:${radius},${lat},${lng});
+          relation["addr:housenumber"](around:${radius},${lat},${lng});
+
+          node["building"](around:${radius},${lat},${lng});
           way["building"](around:${radius},${lat},${lng});
           relation["building"](around:${radius},${lat},${lng});
         );
-        out center tags 80;
+        out tags center 300;
       `;
 
       const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
@@ -118,18 +122,26 @@
       propertyMarkers.forEach(marker => map.removeLayer(marker));
       propertyMarkers.length = 0;
 
+      const used = new Set();
+
       data.elements.forEach((property, index) => {
         const pointLat = property.lat || property.center?.lat;
         const pointLng = property.lon || property.center?.lon;
 
         if (!pointLat || !pointLng) return;
 
+        const key = pointLat.toFixed(6) + "," + pointLng.toFixed(6);
+        if (used.has(key)) return;
+        used.add(key);
+
         const tags = property.tags || {};
 
         const address =
           tags["addr:housenumber"] && tags["addr:street"]
             ? tags["addr:housenumber"] + " " + tags["addr:street"]
-            : "Unknown Property #" + (index + 1);
+            : tags["addr:housenumber"]
+              ? tags["addr:housenumber"] + " Unknown Street"
+              : "Unknown Property #" + (index + 1);
 
         addPropertyMarker({
           address: address,
@@ -138,6 +150,8 @@
           image: "https://placehold.co/300x200?text=Property"
         });
       });
+
+      console.log("Properties found:", propertyMarkers.length);
     }
 
     function addPropertyMarker(property) {

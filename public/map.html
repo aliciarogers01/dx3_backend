@@ -95,33 +95,41 @@
       iconAnchor: [14, 14]
     });
 
-    const testProperties = [
-      {
-        address: "57 Shaefer Street",
-        lat: 41.058867,
-        lng: -81.530993,
-        image: "https://placehold.co/300x200?text=Property"
-      },
-      {
-        address: "65 Paris Avenue",
-        lat: 41.05795,
-        lng: -81.53135,
-        image: "https://placehold.co/300x200?text=Property"
-      },
-      {
-        address: "89 Shaefer Court",
-        lat: 41.05930,
-        lng: -81.53215,
-        image: "https://placehold.co/300x200?text=Property"
-      },
-      {
-        address: "1024 Yale Street",
-        lat: 41.05905,
-        lng: -81.52980,
-        image: "https://placehold.co/300x200?text=Property"
-      }
-    ];
+    async function loadNearbyBuildings(lat, lng) {
+  const radius = 250;
 
+  const query = `
+    [out:json][timeout:25];
+    (
+      way["building"](around:${radius},${lat},${lng});
+    );
+    out center tags 25;
+  `;
+
+  const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+
+  const response = await fetch(url);
+  const data = await response.json();
+
+  data.elements.forEach((building, index) => {
+    if (!building.center) return;
+
+    const tags = building.tags || {};
+
+    const address =
+      tags["addr:housenumber"] && tags["addr:street"]
+        ? tags["addr:housenumber"] + " " + tags["addr:street"]
+        : "Unknown Property #" + (index + 1);
+
+    addPropertyMarker({
+      address: address,
+      lat: building.center.lat,
+      lng: building.center.lon,
+      image: "https://placehold.co/300x200?text=Property"
+    });
+  });
+}
+    
     function addPropertyMarker(property) {
       const marker = L.marker([property.lat, property.lng], {
         icon: propertyIcon
@@ -136,7 +144,7 @@
       `);
     }
 
-    testProperties.forEach(addPropertyMarker);
+    loadNearbyBuildings(startLat, startLng);
 
     window.inquireProperty = function(address) {
       alert("Inquire pressed for:\n" + address);

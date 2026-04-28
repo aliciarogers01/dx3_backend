@@ -6,6 +6,8 @@ import pg from "pg";
 dotenv.config();
 
 const app = express();
+
+app.use(express.static("public"));
 const { Pool } = pg;
 
 app.use(cors());

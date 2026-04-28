@@ -107,7 +107,7 @@
           way["building"](around:${radius},${lat},${lng});
           relation["building"](around:${radius},${lat},${lng});
         );
-        out center tags 200;
+        out center tags 80;
       `;
 
       const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);

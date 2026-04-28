@@ -70,7 +70,7 @@
     const map = L.map("map", {
       zoomControl: false,
       attributionControl: false
-    }).setView([startLat, startLng], 17);
+    }).setView([startLat, startLng], 19);
 
     L.tileLayer(
       "https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}?access_token=" + MAPBOX_TOKEN,
@@ -159,7 +159,7 @@
     };
 
     window.setPlayerLocation = function(lat, lng) {
-      map.setView([lat, lng], 17);
+      map.setView([lat, lng], 19);
       playerMarker.setLatLng([lat, lng]);
       loadNearbyBuildings(lat, lng);
     };

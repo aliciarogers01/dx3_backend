@@ -170,17 +170,55 @@
       propertyMarkers.push(marker);
     }
 
-    loadNearbyBuildings(startLat, startLng);
+    async function loadNearbyBuildings(lat, lng) {
+  const radius = 500;
 
-    window.inquireProperty = function(address) {
-      alert("Inquire pressed for:\n" + address);
-    };
+  const query = `
+    [out:json][timeout:15];
+    (
+      node["addr:housenumber"](around:${radius},${lat},${lng});
+      way["building"](around:${radius},${lat},${lng});
+    );
+    out center tags 100;
+  `;
 
-    window.setPlayerLocation = function(lat, lng) {
-      map.setView([lat, lng], 19);
-      playerMarker.setLatLng([lat, lng]);
-      loadNearbyBuildings(lat, lng);
-    };
+  const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    propertyMarkers.forEach(marker => map.removeLayer(marker));
+    propertyMarkers.length = 0;
+
+    data.elements.forEach((property, index) => {
+      const pointLat = property.lat || property.center?.lat;
+      const pointLng = property.lon || property.center?.lon;
+
+      if (!pointLat || !pointLng) return;
+
+      const tags = property.tags || {};
+
+      const address =
+        tags["addr:housenumber"] && tags["addr:street"]
+          ? tags["addr:housenumber"] + " " + tags["addr:street"]
+          : tags["addr:housenumber"]
+            ? tags["addr:housenumber"] + " Shaefer Street"
+            : "Unknown Property #" + (index + 1);
+
+      addPropertyMarker({
+        address: address,
+        lat: pointLat,
+        lng: pointLng,
+        image: "https://placehold.co/300x200?text=Property"
+      });
+    });
+
+    console.log("Properties found:", propertyMarkers.length);
+  } catch (error) {
+    console.log("Property load failed:", error);
+  }
+}
   </script>
 </body>
 </html>

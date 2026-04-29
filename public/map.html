@@ -23,10 +23,10 @@
     }
 
     .property-dot {
-      width: 22px;
-      height: 22px;
+      width: 14px;
+      height: 14px;
       background: #ffcc00;
-      border: 3px solid #111;
+      border: 2px solid #111;
       border-radius: 50%;
       box-shadow: 0 2px 6px rgba(0,0,0,0.4);
       cursor: pointer;
@@ -63,6 +63,7 @@
 
   <script>
     const MAPBOX_TOKEN = "pk.eyJ1Ijoib2htc3JhZGlvIiwiYSI6ImNtbmxuZGFpaDFhNGkycnE1ajlqZHVmeTMifQ.0D3kQ_qlHIGiskjSo5D-aQ";
+    const BACKEND_URL = "https://dx3backend-production.up.railway.app";
 
     const startLat = 41.058867;
     const startLng = -81.530993;
@@ -91,67 +92,14 @@
     const propertyIcon = L.divIcon({
       className: "",
       html: '<div class="property-dot"></div>',
-      iconSize: [28, 28],
-      iconAnchor: [14, 14]
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
     });
 
     const propertyMarkers = [];
 
-    async function loadNearbyBuildings(lat, lng) {
-      const radius = 700;
-
-      const query = `
-        [out:json][timeout:25];
-        (
-          node["addr:housenumber"](around:${radius},${lat},${lng});
-          way["addr:housenumber"](around:${radius},${lat},${lng});
-          relation["addr:housenumber"](around:${radius},${lat},${lng});
-
-          node["building"](around:${radius},${lat},${lng});
-          way["building"](around:${radius},${lat},${lng});
-          relation["building"](around:${radius},${lat},${lng});
-        );
-        out tags center 300;
-      `;
-
-      const url = "https://overpass.kumi.systems/api/interpreter?data=" + encodeURIComponent(query);
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      propertyMarkers.forEach(marker => map.removeLayer(marker));
-      propertyMarkers.length = 0;
-
-      const used = new Set();
-
-      data.elements.forEach((property, index) => {
-        const pointLat = property.lat || property.center?.lat;
-        const pointLng = property.lon || property.center?.lon;
-
-        if (!pointLat || !pointLng) return;
-
-        const key = pointLat.toFixed(6) + "," + pointLng.toFixed(6);
-        if (used.has(key)) return;
-        used.add(key);
-
-        const tags = property.tags || {};
-
-        const address =
-          tags["addr:housenumber"] && tags["addr:street"]
-            ? tags["addr:housenumber"] + " " + tags["addr:street"]
-            : tags["addr:housenumber"]
-              ? tags["addr:housenumber"] + " Unknown Street"
-              : "Unknown Property #" + (index + 1);
-
-        addPropertyMarker({
-          address: address,
-          lat: pointLat,
-          lng: pointLng,
-          image: "https://placehold.co/300x200?text=Property"
-        });
-      });
-
-      console.log("Properties found:", propertyMarkers.length);
+    function safeAddress(address) {
+      return String(address || "").replace(/'/g, "\\'");
     }
 
     function addPropertyMarker(property) {
@@ -161,64 +109,56 @@
 
       marker.bindPopup(`
         <div class="property-card">
-          <img src="${property.image}" />
+          <img src="https://placehold.co/300x200?text=Property" />
           <strong>${property.address}</strong>
-          <button onclick="inquireProperty('${property.address.replace(/'/g, "\\'")}')">Inquire</button>
+          <button onclick="inquireProperty('${safeAddress(property.address)}')">Inquire</button>
         </div>
       `);
 
       propertyMarkers.push(marker);
     }
 
-    async function loadNearbyBuildings(lat, lng) {
-  const radius = 500;
+    async function loadProperties(lat, lng) {
+      try {
+        const res = await fetch(
+          BACKEND_URL + "/properties?lat=" + lat + "&lng=" + lng
+        );
 
-  const query = `
-    [out:json][timeout:15];
-    (
-      node["addr:housenumber"](around:${radius},${lat},${lng});
-      way["building"](around:${radius},${lat},${lng});
-    );
-    out center tags 100;
-  `;
+        const data = await res.json();
 
-  const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+        propertyMarkers.forEach(marker => map.removeLayer(marker));
+        propertyMarkers.length = 0;
 
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
+        data.forEach(property => {
+          addPropertyMarker({
+            address: property.address,
+            lat: property.lat,
+            lng: property.lng
+          });
+        });
 
-    propertyMarkers.forEach(marker => map.removeLayer(marker));
-    propertyMarkers.length = 0;
+        console.log("Loaded properties:", data.length);
+      } catch (error) {
+        console.log("Property load failed:", error);
+      }
+    }
 
-    data.elements.forEach((property, index) => {
-      const pointLat = property.lat || property.center?.lat;
-      const pointLng = property.lon || property.center?.lon;
+    loadProperties(startLat, startLng);
 
-      if (!pointLat || !pointLng) return;
-
-      const tags = property.tags || {};
-
-      const address =
-        tags["addr:housenumber"] && tags["addr:street"]
-          ? tags["addr:housenumber"] + " " + tags["addr:street"]
-          : tags["addr:housenumber"]
-            ? tags["addr:housenumber"] + " Shaefer Street"
-            : "Unknown Property #" + (index + 1);
-
-      addPropertyMarker({
-        address: address,
-        lat: pointLat,
-        lng: pointLng,
-        image: "https://placehold.co/300x200?text=Property"
-      });
+    map.on("moveend", () => {
+      const center = map.getCenter();
+      loadProperties(center.lat, center.lng);
     });
 
-    console.log("Properties found:", propertyMarkers.length);
-  } catch (error) {
-    console.log("Property load failed:", error);
-  }
-}
+    window.inquireProperty = function(address) {
+      alert("Inquire pressed for:\n" + address);
+    };
+
+    window.setPlayerLocation = function(lat, lng) {
+      map.setView([lat, lng], 19);
+      playerMarker.setLatLng([lat, lng]);
+      loadProperties(lat, lng);
+    };
   </script>
 </body>
 </html>

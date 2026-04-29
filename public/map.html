@@ -107,7 +107,7 @@
 
       marker.bindPopup(`
         <div class="property-card">
-          <img src="https://placehold.co/300x200?text=Property" />
+          <img src="https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${property.lng},${property.lat},19/300x200?access_token=${MAPBOX_TOKEN}" />
           <strong>${property.address}</strong>
           <button onclick="inquireProperty('${safeAddress(property.address)}')">Inquire</button>
         </div>

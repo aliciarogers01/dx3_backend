@@ -101,17 +101,22 @@
     }
 
     function addPropertyMarker(property) {
-      const marker = L.marker([property.lat, property.lng], {
-        icon: propertyIcon
-      }).addTo(map);
+  const marker = L.marker([property.lat, property.lng], {
+    icon: propertyIcon
+  }).addTo(map);
 
-      marker.bindPopup(`
-        <div class="property-card">
-          <img src="https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${property.lng},${property.lat},19/300x200?access_token=${MAPBOX_TOKEN}" />
-          <strong>${property.address}</strong>
-          <button onclick="inquireProperty('${safeAddress(property.address)}')">Inquire</button>
-        </div>
-      `);
+  marker.bindPopup(`
+    <div class="property-card">
+      <div style="width:180px;height:110px;background:#ddd;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;">
+        Property
+      </div>
+      <strong>${property.address}</strong>
+      <button onclick="inquireProperty('${property.address.replace(/'/g, "\\'")}')">Inquire</button>
+    </div>
+  `);
+
+  propertyMarkers.push(marker);
+}
 
       propertyMarkers.push(marker);
     }

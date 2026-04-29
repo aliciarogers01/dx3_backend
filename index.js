@@ -101,7 +101,7 @@ app.get("/properties", async (req, res) => {
       return res.json([]);
     }
 
-    const radius = 0.002;
+    const radius = 0.0015;
 
     const result = await pool.query(
       `

@@ -6,10 +6,9 @@ import pg from "pg";
 dotenv.config();
 
 const app = express();
-
-app.use(express.static("public"));
 const { Pool } = pg;
 
+app.use(express.static("public"));
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
@@ -74,6 +73,15 @@ async function setupDatabase() {
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS properties (
+      id SERIAL PRIMARY KEY,
+      address TEXT,
+      lat DOUBLE PRECISION,
+      lng DOUBLE PRECISION
+    );
+  `);
 }
 
 app.get("/", (req, res) => {
@@ -82,6 +90,40 @@ app.get("/", (req, res) => {
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/properties", async (req, res) => {
+  try {
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+
+    if (!lat || !lng) {
+      return res.json([]);
+    }
+
+    const radius = 0.002;
+
+    const result = await pool.query(
+      `
+      SELECT id, address, lat, lng
+      FROM properties
+      WHERE lat BETWEEN $1 AND $2
+      AND lng BETWEEN $3 AND $4
+      LIMIT 300;
+      `,
+      [
+        lat - radius,
+        lat + radius,
+        lng - radius,
+        lng + radius
+      ]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Properties lookup error:", error);
+    res.status(500).json({ error: "Failed to load properties" });
+  }
 });
 
 app.post("/players/create", async (req, res) => {
